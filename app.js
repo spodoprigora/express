@@ -13,7 +13,11 @@ const fortune = require('./lib/fortune.js');
 const bodyParser = require('body-parser').urlencoded({ extended: true });
 const formidable = require('formidable');
 const jqupload = require('jquery-file-upload-middleware');
-
+const cookieParser = require('cookie-parser');
+const credentials = require('./credentials');
+const expressSession = require('express-session');
+const cartValidation = require('./lib/cartValidation');
+const emailService = require('./lib/email.js')(credentials);
 
 function getWeatherData(){
   return {
@@ -42,7 +46,7 @@ function getWeatherData(){
     ],
   };
 }
-
+const VALID_EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 
 const app = express();
 
@@ -63,7 +67,7 @@ app.use((req, res, next) => {
   res.locals.partials.weatherContext = getWeatherData();
   next();
 });
-app.use('/upload', (req, res, next) => {
+/*app.use('/upload', (req, res, next) => {
   const now = Date.now();
   jqupload.fileHandler({
     uploadDir: () => {
@@ -73,7 +77,20 @@ app.use('/upload', (req, res, next) => {
       return `/uploads/${now}`;
     },
   })(req, res, next);
-})
+})*/
+app.use(cookieParser(credentials.cookieSecret));
+app.use(expressSession({
+  resave: false,
+  saveUninitialized: false,
+  secret: credentials.cookieSecret,
+}));
+app.use((req, res, next) => {
+  res.locals.flash = req.session.flash;
+  delete req.session.flash;
+  next();
+});
+app.use(cartValidation.checkWaivers);
+app.use(cartValidation.checkGuestCounts);
 
 app.get('/', (req, res) => {
   res.render('home');
@@ -107,6 +124,9 @@ app.get('/data/nursery-rhyme', (req, res) => {
     adjective: 'пушистый',
     noun: 'черт',
   });
+});
+app.get('/thank-you', (req, res) => {
+  res.render('thank-you');
 });
 app.get('/newsletter', (req, res) => {
   res.render('newsletter', { csrf: 'CSRF token goes here' });
@@ -144,6 +164,64 @@ app.post('/contest/vacation-photo/:year/:month', (req, res) => {
     console.log(files);
     res.redirect(303, '/thank-you');
   });
+});
+app.post('/cart/checkout', (req, res, next) => {
+  const cart = req.session.cart;
+  if (!cart) next(new Error('корзины не существует'));
+  const name = req.body.name || '';
+  const email = req.body.email || '';
+  if (!email.match(VALID_EMAIL_REGEX)) {
+    return res.next(new Error('Некорректный email'));
+  }
+
+  cart.number = Math.random().toString().replace(/^0\.0*/, '');
+  cart.billing = { name, email };
+  res.rendedr('email/cart-thank-you', { layout: null, cart }, (err, html) => {
+    if (err) console.log('Ошибка в шаблоне письма');
+    emailService.send(cart.billing.email, 'Thank youfor booking your tip with Meadowlark Travel', html);
+  }, (err) => {
+    if (err) console.error(`Не могу отправить подтверждение ${err.stack}`);
+  });
+
+});
+
+// for now, we're mocking NewsletterSignup:
+function NewsletterSignup(){}
+NewsletterSignup.prototype.save = function (cb) {
+  cb();
+};
+
+
+app.post('/newsletter', (req, res) => {
+  const name = req.body.name || '';
+  const email = req.body.email || '';
+  if (!email.match(VALID_EMAIL_REGEX)) {
+    if (req.xhr) return res.json({ error: 'Некорректный email' });
+    req.session.flash = {
+      type: 'danger',
+      intro: 'Ошибка проверки',
+      message: 'Введенный email некорректен',
+    };
+    return res.redirect(303, '/newsletter/archive');
+    const newsletter = new NewsletterSignup({ name, email }).save((err) => {
+      if (err) {
+        if (req.xhr) return res.json({ error: 'Ошибка базы данных' });
+        req.session.flash = {
+          type: 'danger',
+          intro: 'Ошибка базы данных',
+          message: 'Произошла ошибка базы данных',
+        };
+        return res.redirect(303, '/newwsletter/archive');
+      }
+      if (req.xhr) return res.json({ success: true });
+      req.session.flash = {
+        type: 'success',
+        intro: 'Спасибо',
+        message: 'Вы подписались на новости',
+      };
+      return res.redirect(303, '/newsletter/archive');
+    });
+  }
 });
 
 app.use((req, res) => {
