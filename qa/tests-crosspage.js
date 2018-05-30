@@ -11,7 +11,7 @@ suite('Межстраничные тесты', () => {
         const referrer = 'http://localhost:3000/tours/hood-river';
         browser.visit(referrer, () => {
             browser.clickLink('.requestGroupRate', () => {
-                assert(browser.field('referrer').value === refferer);
+                browser.assert.element('form input[name=referrer]',  referrer);
                 done();
             });
         });
@@ -21,20 +21,18 @@ suite('Межстраничные тесты', () => {
         const referrer = 'http://localhost:3000/tours/oregon-coast';
         browser.visit(referrer, () => {
             browser.clickLink('.requestGroupRate', () => {
-                assert(browser.field('referrer').value === refferer);
+                browser.assert.element('form input[name=referrer]',  referrer);
                 done();
             });
         });
     });
 
-    test('посещение страницы запрос расценок для групп напрямую должен приводить к пустому полю реферера', (done) => {
-        const referrer = 'http://localhost:3000/tours/request-group-rate';
-        browser.visit(referrer, () => {
-            browser.clickLink('.requestGroupRate', () => {
-                assert(browser.field('referrer').value === '');
-                done();
-            });
-        });
-    });
+     test('посещение страницы запрос расценок для групп напрямую должен приводить к пустому полю реферера', (done) => {
+         const referrer = 'http://localhost:3000/tours/request-group-rate';
+         browser.visit(referrer, () => {
+            browser.assert.element('form input[name=referrer]',  '');
+            done();
 
+         });
+     });
 });

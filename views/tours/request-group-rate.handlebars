@@ -6,10 +6,11 @@
     Электронная почта: <input type="email" name="email"><br>
     <input type="submit" value="Submit">
 </form>
-{{#selection 'jquery' }}
+
+{{#section 'jquery'}}
     <script>
-        $(document).ready(() => {
+        $(document).ready(function(){
             $('input[name="referrer"]').val(document.referrer);
-        });
+        })
     </script>
-{{/selection}}
+{{/section}}

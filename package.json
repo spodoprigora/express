@@ -4,18 +4,30 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "testCross": "mocha -u tdd -R spec qa/tests-crosspage.js",
+    "testUnit": "mocha -u tdd -R spec qa/tests-unit.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "body-parser": "^1.18.3",
     "express": "^4.16.3",
-    "express-handlebars": "^3.0.0"
+    "express-handlebars": "^3.0.0",
+    "formidable": "^1.2.1",
+    "grunt": "^1.0.2",
+    "jquery-file-upload-middleware": "^0.1.8"
   },
   "devDependencies": {
     "chai": "^4.1.2",
+    "eslint": "^4.19.1",
+    "eslint-config-airbnb": "^16.1.0",
+    "eslint-config-airbnb-base": "^12.1.0",
+    "eslint-plugin-import": "^2.12.0",
+    "grunt-cafe-mocha": "^0.1.13",
+    "grunt-contrib-jshint": "^1.1.0",
+    "grunt-exec": "^3.0.0",
     "mocha": "^5.2.0",
-    "zombie": "^3.1.1"
+    "zombie": "^6.1.2"
   }
 }
